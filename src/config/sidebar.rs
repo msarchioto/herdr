@@ -74,7 +74,7 @@ impl<'de> Deserialize<'de> for SidebarTokenColor {
         });
         let Some(hex) = hex else {
             return Err(serde::de::Error::custom(
-                "sidebar token fg must be #RGB or #RRGGBB",
+                "sidebar token colors must be #RGB or #RRGGBB",
             ));
         };
         let (r, g, b) = if hex.len() == 3 {
@@ -100,6 +100,8 @@ impl<'de> Deserialize<'de> for SidebarTokenColor {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct SidebarTokenStyle {
     pub fg: Option<SidebarTokenColor>,
+    /// Fills the whole sidebar entry (every line of the space or agent), not just the token.
+    pub bg: Option<SidebarTokenColor>,
     pub bold: Option<bool>,
     pub dim: Option<bool>,
 }
@@ -177,6 +179,8 @@ struct RawStyledSidebarToken {
     #[serde(default)]
     fg: Option<SidebarTokenColor>,
     #[serde(default)]
+    bg: Option<SidebarTokenColor>,
+    #[serde(default)]
     bold: Option<bool>,
     #[serde(default)]
     dim: Option<bool>,
@@ -208,6 +212,7 @@ impl RawSidebarToken {
                     token.token,
                     Some(SidebarTokenStyle {
                         fg: token.fg,
+                        bg: token.bg,
                         bold: token.bold,
                         dim: token.dim,
                     }),
@@ -255,6 +260,9 @@ where
     map.serialize_entry("token", &name)?;
     if let Some(fg) = style.fg {
         map.serialize_entry("fg", &fg)?;
+    }
+    if let Some(bg) = style.bg {
+        map.serialize_entry("bg", &bg)?;
     }
     if let Some(bold) = style.bold {
         map.serialize_entry("bold", &bold)?;
@@ -622,6 +630,24 @@ rows = [[{ token = "$status", rules = [{ contains = "error", bold = true }] }]]
         let config: SidebarConfig = toml::from_str(input).expect("conditional sidebar config");
         let encoded = toml::to_string(&config).unwrap();
         assert!(encoded.contains("rules"));
+        assert_eq!(toml::from_str::<SidebarConfig>(&encoded).unwrap(), config);
+    }
+
+    #[test]
+    fn sidebar_token_background_parses_merges_and_round_trips() {
+        let input = r##"
+[spaces]
+rows = [[{ token = "workspace", bg = "#111", rules = [{ equals = "Ops", bg = "#fe8019" }, { equals = "Docs", fg = "#fff" }] }]]
+"##;
+        let config: SidebarConfig = toml::from_str(input).expect("sidebar bg config");
+        let token = &config.spaces.rows[0][0];
+        let bg = |value| token.style_for_value(value).unwrap().bg.unwrap().ratatui();
+        assert_eq!(bg("Ops"), ratatui::style::Color::Rgb(0xfe, 0x80, 0x19));
+        // A matching rule without bg keeps the token's base bg.
+        assert_eq!(bg("Docs"), ratatui::style::Color::Rgb(0x11, 0x11, 0x11));
+        assert_eq!(bg("other"), ratatui::style::Color::Rgb(0x11, 0x11, 0x11));
+        let encoded = toml::to_string(&config).unwrap();
+        assert!(encoded.contains("bg"));
         assert_eq!(toml::from_str::<SidebarConfig>(&encoded).unwrap(), config);
     }
 

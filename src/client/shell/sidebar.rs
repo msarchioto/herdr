@@ -702,6 +702,7 @@ pub(in crate::client::shell) fn render_workspace_rows(
     dragged: bool,
     palette: &Palette,
 ) {
+    let token_background = crate::ui::resolved_rows_background(&rows);
     for (row_index, row) in rows.iter().enumerate() {
         let y = area.y + row_index as u16;
         if y >= area.bottom() {
@@ -773,6 +774,8 @@ pub(in crate::client::shell) fn render_workspace_rows(
         Some(workspace_selection_background(palette))
     } else if dragged {
         Some(palette.surface1)
+    } else if token_background.is_some() {
+        token_background
     } else if focused {
         Some(workspace_active_background(palette, navigating))
     } else {

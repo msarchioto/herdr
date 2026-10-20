@@ -103,6 +103,16 @@ pub(crate) fn agent_panel_entries_from(
     entries
 }
 
+/// Background for a whole sidebar entry: the first resolved token that sets `bg`.
+pub(crate) fn resolved_rows_background(
+    rows: &[Vec<ResolvedToken>],
+) -> Option<ratatui::style::Color> {
+    rows.iter()
+        .flatten()
+        .find_map(|token| token.style.bg)
+        .map(|color| color.ratatui())
+}
+
 pub(crate) fn resolved_token_spans(
     resolved: &[ResolvedToken],
     state_icon: (&str, Style),

@@ -325,7 +325,9 @@ pub(super) fn render_agent_row(
     config: &ClientShellConfig,
 ) {
     let palette = &config.palette;
-    let row_style = if row.focused {
+    let row_style = if let Some(background) = crate::ui::resolved_rows_background(&row.rows) {
+        Style::default().bg(background)
+    } else if row.focused {
         Style::default().bg(palette.active_row_bg)
     } else {
         Style::default()

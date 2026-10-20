@@ -41,6 +41,8 @@ struct RawRule {
     #[serde(skip_serializing_if = "Option::is_none")]
     fg: Option<SidebarTokenColor>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    bg: Option<SidebarTokenColor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     bold: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     dim: Option<bool>,
@@ -97,6 +99,7 @@ impl TryFrom<RawRule> for SidebarTokenRule {
             hide: raw.hide,
             style: SidebarTokenStyle {
                 fg: raw.fg,
+                bg: raw.bg,
                 bold: raw.bold,
                 dim: raw.dim,
             },
@@ -109,6 +112,7 @@ impl From<SidebarTokenRule> for RawRule {
         let mut raw = Self {
             ignore_case: rule.ignore_case.then_some(true),
             fg: rule.style.fg,
+            bg: rule.style.bg,
             bold: rule.style.bold,
             dim: rule.style.dim,
             hide: rule.hide,
@@ -185,6 +189,7 @@ pub(super) fn matching_style(
             }
             return Some(SidebarTokenStyle {
                 fg: rule.style.fg.or(base.fg),
+                bg: rule.style.bg.or(base.bg),
                 bold: rule.style.bold.or(base.bold),
                 dim: rule.style.dim.or(base.dim),
             });

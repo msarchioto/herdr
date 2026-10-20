@@ -1682,3 +1682,59 @@ fn semantic_notifications_use_client_policy_and_stable_navigation_targets() {
     assert!(state.visible_notification.is_none());
     assert_eq!(state.pending_notifications.len(), 1);
 }
+
+#[test]
+fn sidebar_token_background_fills_space_and_agent_rows() {
+    use ratatui::style::Color;
+
+    let mut config = Config::default();
+    config.ui.sidebar = toml::from_str(
+        r##"
+[spaces]
+rows = [["state_icon", { token = "workspace", rules = [{ equals = "client-shell", bg = "#123456" }] }], ["branch"]]
+[agents]
+rows = [["state_icon", { token = "workspace", rules = [{ equals = "client-shell", bg = "#123456" }] }], ["agent"]]
+"##,
+    )
+    .expect("sidebar bg config");
+    let mut projected = snapshot();
+    projected.agents = vec![ClientShellAgent {
+        pane_id: "pane_1".into(),
+        workspace_id: "ws_1".into(),
+        tab_id: "tab_1".into(),
+        name: Some("reviewer".into()),
+        display_agent: None,
+        agent: Some("pi".into()),
+        title: None,
+        terminal_title: None,
+        terminal_title_stripped: None,
+        agent_status: AgentStatus::Working,
+        state_change_seq: 1,
+        state_labels: Vec::new(),
+        tokens: Vec::new(),
+        focused: true,
+    }];
+    let mut state = ClientShellState::new(ClientShellConfig::from_config(&config));
+    state.set_snapshot(Box::new(projected));
+    state.set_pane_surface(surface());
+    let buffer = state
+        .compose(106, 30)
+        .expect("sidebar frame")
+        .to_ratatui_buffer()
+        .expect("sidebar buffer");
+
+    let space = state.hits.workspaces.first().expect("space row hit").rect;
+    let agent = state.hits.agents.first().expect("agent row hit").0;
+    for rect in [space, agent] {
+        assert_eq!(rect.height, 2, "both configured lines render: {rect:?}");
+        for y in rect.y..rect.bottom() {
+            for x in rect.x..rect.right() {
+                assert_eq!(
+                    buffer[(x, y)].bg,
+                    Color::Rgb(0x12, 0x34, 0x56),
+                    "({x}, {y})"
+                );
+            }
+        }
+    }
+}
